@@ -1,8 +1,12 @@
-﻿using System.Net.WebSockets;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace FunctionalParser
 {
-    public delegate IList<(IList<string>, string)> ILexer(string stream);
+    public delegate (IList<string>, string, bool) ILexer(string stream);
 
     // x*   => Choice(Some(x), Nothing)
     // x+   => Some(x)
@@ -10,14 +14,9 @@ namespace FunctionalParser
     // x,y  => Sequence(x, y)
     public static class Lexer
     {
-        private static IList<(IList<string>, string)> Fail()
+        private static (IList<string>, string, bool) Fail(string s)
         {
-            return new List<(IList<string>, string)>();
-        }
-
-        private static IList<(IList<string>, string)> CreateResult(params (IList<string>, string)[] values)
-        {
-            return new List<(IList<string>, string)>(values);
+            return (Array.Empty<string>(), s, false);
         }
 
         public static readonly ILexer LETTER_LOWERCASE = Range('a', 'z');
@@ -28,7 +27,7 @@ namespace FunctionalParser
 
         public static ILexer Nothing()
         {
-            return (s) => CreateResult((new List<string> { "" }, s));
+            return (s) => (Array.Empty<string>(), s, true);
         }
 
         /// <summary>
@@ -49,16 +48,15 @@ namespace FunctionalParser
             }
             return (s) =>
             {
-                var successfulLexes = CreateResult();
                 foreach (ILexer lx in lexers)
                 {
-                    var lexes = lx.Invoke(s);
-                    foreach (var lex in lexes)
+                    var (result, remaining, isSuccess) = lx.Invoke(s);
+                    if (isSuccess)
                     {
-                        successfulLexes.Add(lex);
+                        return (result, remaining, isSuccess);
                     }
                 }
-                return successfulLexes;
+                return Fail(s);
             };
         }
 
@@ -75,33 +73,22 @@ namespace FunctionalParser
         {
             return (s) =>
             {
-                var successfulLexes = CreateResult();
-                void GetNext((IList<string>, string) previous)
+                var (result, remaining, isSuccess) = lexer.Invoke(s);
+                if (!isSuccess)
                 {
-                    var result = lexer.Invoke(previous.Item2);
-                    if (result.Count == 0)
-                    {
-                        //add previous to the output
-                        successfulLexes?.Add(previous);
-                    }
-                    else
-                    {
-                        result.Select(x => (previous.Item1.Concat(x.Item1).ToList(), x.Item2))
-                            .ToList()
-                            .ForEach(x => GetNext(x));
-                    }
+                    return Fail(s);
                 }
-
-                var initialRun = lexer.Invoke(s);
-                if (initialRun.Count != 0)
+                var builder = new List<IList<string>>();
+                while (isSuccess)
                 {
-                    foreach (var lex in initialRun)
-                    {
-                        GetNext(lex);
-                    }
+                    builder.Add(result);
+                    (result, remaining, isSuccess) = lexer.Invoke(remaining);
                 }
-
-                return successfulLexes;
+                return (
+                    builder.Select(x => x.Aggregate((x, y) => x + y)).ToList(),
+                    remaining,
+                    true
+                );
             };
         }
 
@@ -123,28 +110,23 @@ namespace FunctionalParser
             }
             return (s) =>
             {
-                var previousLexes = lexers[0].Invoke(s).ToList();
-                foreach (ILexer lx in lexers[1..])
+                var (result, remaining, isSuccess) = Fail("");
+                remaining = s;
+                var builder = new List<IList<string>>();
+                foreach (ILexer lx in lexers)
                 {
-                    var subsequentLexes = CreateResult();
-                    foreach (var previous in previousLexes)
+                    (result, remaining, isSuccess) = lx.Invoke(remaining);
+                    builder.Add(result);
+                    if (!isSuccess)
                     {
-                        var nextLexes = lx.Invoke(previous.Item2)
-                            .Select(x => (previous.Item1.Concat(x.Item1).ToList(), x.Item2))
-                            .ToList();
-                        foreach (var nextLex in nextLexes)
-                        {
-                            subsequentLexes.Add(nextLex);
-                        }
+                        return Fail(s);
                     }
-
-                    if (subsequentLexes.Count == 0)
-                    {
-                        return Fail();
-                    }
-                    previousLexes = subsequentLexes.ToList();
                 }
-                return previousLexes;
+                return (
+                    builder.Select(x => x.Aggregate("", (x, y) => x + y)).ToList(),
+                    remaining,
+                    true
+                );
             };
         }
 
@@ -175,11 +157,11 @@ namespace FunctionalParser
             {
                 if (string.IsNullOrEmpty(s))
                 {
-                    return Fail();
+                    return Fail(s);
                 }
                 return a <= s[0] && s[0] <= b
-                    ? CreateResult((new List<string> { s[0].ToString() }, s[1..]))
-                    : Fail();
+                    ? (new List<string> { s[0].ToString() }, s[1..], true)
+                    : Fail(s);
             };
         }
      
@@ -194,17 +176,7 @@ namespace FunctionalParser
         /// <returns></returns>
         public static ILexer CharSequence(string t)
         {
-            return (s) =>
-            {
-                if (s.StartsWith(t))
-                {
-                    return CreateResult((new List<string> { t }, s[t.Length..]));
-                }
-                else
-                {
-                    return Fail();
-                }
-            };
+            return (s) => s.StartsWith(t) ? (new List<string> { t }, s[t.Length..], true) : Fail(s);
         }
 
         /// <summary>
@@ -237,10 +209,8 @@ namespace FunctionalParser
         {
             return (s) =>
             {
-                var lex = lexer.Invoke(s);
-                return lex.Count > 0
-                    ? CreateResult((new List<string> { "" }, s))
-                    : Fail();
+                var (result, remaining, isSuccess) = lexer.Invoke(s);
+                return isSuccess ? (Array.Empty<string>(), s, true) : Fail(s);
             };
         }
 
@@ -259,10 +229,8 @@ namespace FunctionalParser
         {
             return (s) =>
             {
-                var lex = lexer.Invoke(s);
-                return lex.Count > 0
-                    ? Fail()
-                    : CreateResult((new List<string> { "" }, s));
+                var (result, remaining, isSuccess) = lexer.Invoke(s);
+                return isSuccess ? Fail(s) : (Array.Empty<string>(), s, true);
             };
         }
     }
