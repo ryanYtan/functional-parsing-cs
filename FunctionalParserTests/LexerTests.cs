@@ -23,6 +23,12 @@ namespace FunctionalParser.Tests
         public void SequenceTest()
         {
             {
+                var test = "";
+                var lexer = Sequence(Char('a'));
+                var (result, remaining, isSuccess) = lexer.Invoke(test);
+                Assert.IsFalse(isSuccess);
+            }
+            {
                 var test = "a";
                 var lexer = Sequence(Char('a'));
                 var (result, remaining, isSuccess) = lexer.Invoke(test);
@@ -59,6 +65,12 @@ namespace FunctionalParser.Tests
         public void ChoiceTest()
         {
             {
+                var test = "";
+                var lexer = Choice(Char('a'), Char('b'));
+                var (result, remaining, isSuccess) = lexer.Invoke(test);
+                Assert.IsFalse(isSuccess);
+            }
+            {
                 var test = "a";
                 var lexer = Choice(Char('a'), Char('b'));
                 var (result, remaining, isSuccess) = lexer.Invoke(test);
@@ -87,6 +99,12 @@ namespace FunctionalParser.Tests
         public void SomeTest()
         {
             {
+                var test = "";
+                var lexer = Some(Char('a'));
+                var (result, remaining, isSuccess) = lexer.Invoke(test);
+                Assert.IsFalse(isSuccess);
+            }
+            {
                 var test = "a";
                 var lexer = Some(Char('a'));
                 var (result, remaining, isSuccess) = lexer.Invoke(test);
@@ -95,12 +113,28 @@ namespace FunctionalParser.Tests
                 Assert.IsTrue(result.SequenceEqual(new List<string> { "a" }));
             }
             {
+                var test = "aa";
+                var lexer = Some(Char('a'));
+                var (result, remaining, isSuccess) = lexer.Invoke(test);
+                Assert.IsTrue(isSuccess);
+                Assert.AreEqual(remaining, "");
+                Assert.IsTrue(result.SequenceEqual(new List<string> { "a", "a" }));
+            }
+            {
                 var test = "aaa";
                 var lexer = Some(Char('a'));
                 var (result, remaining, isSuccess) = lexer.Invoke(test);
                 Assert.IsTrue(isSuccess);
                 Assert.AreEqual(remaining, "");
                 Assert.IsTrue(result.SequenceEqual(new List<string> { "a", "a", "a" }));
+            }
+            {
+                var test = "abbaa";
+                var lexer = Some(Char('a'));
+                var (result, remaining, isSuccess) = lexer.Invoke(test);
+                Assert.IsTrue(isSuccess);
+                Assert.AreEqual(remaining, "bbaa");
+                Assert.IsTrue(result.SequenceEqual(new List<string> { "a", }));
             }
             {
                 var test = "aabbaa";

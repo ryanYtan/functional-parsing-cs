@@ -19,7 +19,7 @@ var singleCharacterOperators = Choice(
 var program = ZeroOrMore(Choice(name, number, doubleCharacterOperators, singleCharacterOperators, skipSpaces));
 
 //var sourceCode = "name NS11000D prog 1 0 010 011";
-var sourceCode = "proc isPrime() { until = 0; call sqrt; i = 2; while (i <= until) { if (n & % i == 0) then {     call end; } else { aa80Sx = 0; } } } procedure main { call isPrime; }";
+var sourceCode = "proc isPrime() { until = 0; call sqrt; i = 2; while (i <= until) { if (n % i == 0) then {     call end; } else { aa80Sx = 0; } } } procedure main { call isPrime; }";
 var (result, remaining, isSuccess) =  program.Invoke(sourceCode);
 
 

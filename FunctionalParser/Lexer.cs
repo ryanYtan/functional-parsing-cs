@@ -46,18 +46,9 @@ namespace FunctionalParser
             {
                 throw new ArgumentException("Required one or more lexers");
             }
-            return (s) =>
-            {
-                foreach (ILexer lx in lexers)
-                {
-                    var (result, remaining, isSuccess) = lx.Invoke(s);
-                    if (isSuccess)
-                    {
-                        return (result, remaining, isSuccess);
-                    }
-                }
-                return Fail(s);
-            };
+            return (s) => lexers
+                .Select(lx => lx.Invoke(s))
+                .FirstOrDefault(result => result.Item3, Fail(s));
         }
 
         /// <summary>
