@@ -30,16 +30,6 @@ namespace FunctionalParser
             return (s) => (Array.Empty<string>(), s, true);
         }
 
-        /// <summary>
-        /// Returns a new ILexer that sequentially tries the given lexers,
-        /// returning success on the first match, and failure if all lexers
-        /// fail.
-        ///
-        /// This is analagous to the regex alternation operator i.e. x|y.
-        /// </summary>
-        /// <param name="lexers"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException">If lexers is empty</exception>
         public static ILexer Choice(params ILexer[] lexers)
         {
             if (lexers.Length == 0)
@@ -51,15 +41,6 @@ namespace FunctionalParser
                 .FirstOrDefault(result => result.Item3, Fail(s));
         }
 
-        /// <summary>
-        /// Returns a new ILexer that attempts to use the given lexer one or
-        /// more times, returning success if at least one successful use is
-        /// performed, and failure otherwise.
-        /// 
-        /// This is analagous to the regex one-or-more operator i.e. x+
-        /// </summary>
-        /// <param name="lexer"></param>
-        /// <returns></returns>
         public static ILexer Some(ILexer lexer)
         {
             return (s) =>
@@ -83,16 +64,6 @@ namespace FunctionalParser
             };
         }
 
-        /// <summary>
-        /// Returns a new ILexer that successive uses the given lexers one
-        /// after the other, returning success if all lexers have been
-        /// successfully used, and failure otherwise.
-        /// 
-        /// This is analagous to regex concatenation.
-        /// </summary>
-        /// <param name="lexers"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
         public static ILexer Sequence(params ILexer[] lexers)
         {
             if (lexers.Length == 0)
@@ -101,8 +72,7 @@ namespace FunctionalParser
             }
             return (s) =>
             {
-                var (result, remaining, isSuccess) = Fail("");
-                remaining = s;
+                var (result, remaining, isSuccess) = Fail(s); //placeholder
                 var builder = new List<IList<string>>();
                 foreach (ILexer lx in lexers)
                 {
@@ -121,27 +91,11 @@ namespace FunctionalParser
             };
         }
 
-        /// <summary>
-        /// Returns a new ILexer that matches a single character.
-        /// </summary>
-        /// <param name="c"></param>
-        /// <returns></returns>
         public static ILexer Char(char c)
         {
             return Range(c, c);
         }
 
-        /// <summary>
-        /// Returns a new ILexer that matches a range of characters given by
-        /// the expression (a &lt;= S[0] &lt;= b), where S is the input string.
-        /// For example ('a' &lt;= 'm' &lt;= 'b') but not ('a' &lt;= '|' &lt;=
-        /// 'z').
-        /// 
-        /// This is analagous to the regex shorthands a-z, A-Z, 1-9, etc.
-        /// </summary>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
-        /// <returns></returns>
         public static ILexer Range(char a, char b)
         {
             return (s) =>
@@ -155,47 +109,17 @@ namespace FunctionalParser
                     : Fail(s);
             };
         }
-     
-        /// <summary>
-        /// Returns a new ILexer that matches a string. Note that this is
-        /// different from Sequence(Char(c1), Char(c2), ..., Char(cn)). This
-        /// Lexer will return a single element list containing the string t on
-        /// success, whereas the sequence will return a list of
-        /// single-character strings instead.
-        /// </summary>
-        /// <param name="t"></param>
-        /// <returns></returns>
+
         public static ILexer CharSequence(string t)
         {
             return (s) => s.StartsWith(t) ? (new List<string> { t }, s[t.Length..], true) : Fail(s);
         }
 
-        /// <summary>
-        /// Returns a new ILexer that uses the given lexer zero or more times.
-        /// Note that this means that this lexer cannot fail. This is a
-        /// convenience method and is equivalent to Choice(Some(lexer),
-        /// Nothing()).
-        ///
-        /// This is analagous to the regex kleene star operator i.e. x*.
-        /// </summary>
-        /// <param name="lexer"></param>
-        /// <returns></returns>
         public static ILexer ZeroOrMore(ILexer lexer)
         {
             return Choice(Some(lexer), Nothing());
         }
 
-        /// <summary>
-        /// Returns a new ILexer that returns success if the input string is
-        /// successfully lexed by the given lexer, but does not consume any of
-        /// the input string.
-        /// 
-        /// Chaining this method is not supported.
-        /// 
-        /// This is analagous to regex positive lookahead i.e. x(?=y).
-        /// </summary>
-        /// <param name="lexer"></param>
-        /// <returns></returns>
         public static ILexer AssertAfter(ILexer lexer)
         {
             return (s) =>
@@ -205,17 +129,6 @@ namespace FunctionalParser
             };
         }
 
-        /// <summary>
-        /// Returns a new ILexer that returns success if the input string
-        /// cannot be successfully lexed by the given lexed, and does not
-        /// consume any of the input string.
-        /// 
-        /// Chaining this method is not supported.
-        /// 
-        /// This is analagous to regex negative lookahead i.e. x(?!y).
-        /// </summary>
-        /// <param name="lexer"></param>
-        /// <returns></returns>
         public static ILexer AssertNotAfter(ILexer lexer)
         {
             return (s) =>
