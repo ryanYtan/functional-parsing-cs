@@ -1,0 +1,32 @@
+bool isprime(n) {
+    if (n <= 1) then {
+        return false;
+    } else {
+        if (n<= 3) then {
+            return true;
+        } else {
+            p=call sqrt(n);
+            i=2;
+            while (i <= p) {
+                if (((n % (i))==0)) then {
+                    return false;
+                } else {
+                    skip;
+                }
+            }
+            return true;
+        }
+    }
+}
+
+int main(void) {
+    int n=0;
+    scanf(n);
+
+    if (isprime(n)) then {
+        print "this is prime";
+        print n;
+    } else {
+        skip;
+    }
+}

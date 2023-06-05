@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FunctionalParser": {
+      "commandName": "Project",
+      "commandLineArgs": "< \"$(ProjectDir)Data/ExampleProgram.txt\""
+    }
+  }
+}

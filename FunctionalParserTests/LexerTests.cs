@@ -12,11 +12,11 @@ namespace FunctionalParser.Tests
     [TestClass()]
     public class LexerTests
     {
-        private ILexer Char(char c)
+        private static ILexer Char(char c)
         {
             return (s) => string.IsNullOrEmpty(s) || c != s[0]
-                ? (new List<string>(), s, false)
-                : (new List<string> { c.ToString() }, s[1..], true);
+                ? LexerResult.Fail(s)
+                : LexerResult.Success(new string[]{ c.ToString() }, s[1..]);
         }
 
         [TestMethod()]
