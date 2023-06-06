@@ -17,6 +17,8 @@ namespace FunctionalParser
         public static readonly ILexer LETTER = Choice(LETTER_LOWERCASE, LETTER_UPPERCASE);
         public static readonly ILexer DIGIT = Range('0', '9');
         public static readonly ILexer NZ_DIGIT = Range('1', '9');
+        public static readonly ILexer UNDERSCORE = Char('_');
+        public static readonly ILexer WHITESPACE = Choice(" \r\n\t".Select(Char).ToArray());
     
         public static ILexer Nothing()
         {
@@ -144,27 +146,35 @@ namespace FunctionalParser
         public static ILexer Program()
         {
             // Lexer definitions
-            var skipSpaces = Some(Choice(Char(' '), Char('\n'), Char('\b'), Char('\t'), Char('\r')));
+            var skipSpaces = Some(WHITESPACE);
             var name = Sequence(
-                LETTER,
-                ZeroOrMore(Choice(LETTER, DIGIT))
+                Choice(LETTER, UNDERSCORE),
+                ZeroOrMore(Choice(LETTER, DIGIT, UNDERSCORE))
             );
             var number = Choice(
                 Sequence(Char('0'), AssertNotAfter(Choice(LETTER, DIGIT))),
                 Sequence(NZ_DIGIT, ZeroOrMore(DIGIT))
             );
-            var doubleCharacterOperators = Choice(
-                new string[] { "!=", "==", "<=", ">=", "&&", "||" }.Select(x => CharSequence(x)).ToArray()
+            var lengthTwoStrings = Choice(
+                Token.TokenMap.EnumerateLeftToRight()
+                    .Select(x => x.Value)
+                    .Where(x => x.Length == 2)
+                    .Select(CharSequence)
+                    .ToArray()
             );
-            var singleCharacterOperators = Choice(
-                "&|^~!=<>(){};+-*/%\"".Select(x => Char(x)).ToArray()
+            var lengthOneStrings = Choice(
+                Token.TokenMap.EnumerateLeftToRight()
+                    .Select(x => x.Value)
+                    .Where(x => x.Length == 1)
+                    .Select(CharSequence)
+                    .ToArray()
             );
             var program = FullMatch(ZeroOrMore(Choice(
+                skipSpaces,
                 name,
                 number,
-                doubleCharacterOperators,
-                singleCharacterOperators,
-                skipSpaces
+                lengthTwoStrings,
+                lengthOneStrings
             )));
             return program;
         }
