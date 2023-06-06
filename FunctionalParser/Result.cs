@@ -17,12 +17,12 @@ namespace FunctionalParser
 
 		public static Result<T, R> Success(T value, R remaining)
 		{
-			return new Result<T, R>(Option<T>.Of(value), remaining, true);
+			return new Result<T, R>(Option<T>.Some(value), remaining, true);
         }
 
 		public static Result<T, R> Fail(R remaining)
 		{
-			return new Result<T, R>(Option<T>.Empty(), remaining, false);
+			return new Result<T, R>(Option<T>.None(), remaining, false);
         }
 
 		public T GetResult()

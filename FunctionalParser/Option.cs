@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
+
 namespace FunctionalParser
 {
-	public class Option<T>
+	public class Option<T> : IEnumerable<T>
 	{
 		private readonly T[] _value;
 
@@ -15,29 +17,39 @@ namespace FunctionalParser
 			_value = Array.Empty<T>();
         }
 
-		public static Option<T> Of(T value)
+		public static Option<T> Some(T value)
 		{
 			return new Option<T>(value);
         }
 
-		public static Option<T> Empty()
+		public static Option<T> None()
 		{
 			return new Option<T>();
         }
 
-		public bool IsPresent()
+		public bool IsSome()
 		{
 			return _value.Length > 0;
         }
 
-		public bool IsEmpty()
+		public bool IsNone()
 		{
 			return _value.Length == 0;
         }
 
-		public T Get()
+        public IEnumerator<T> GetEnumerator()
+        {
+            return ((IEnumerable<T>)_value).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+			return _value.GetEnumerator();
+        }
+
+        public T Get()
 		{
-			if (IsPresent())
+			if (IsSome())
 			{
 				return _value[0];
             }
@@ -46,8 +58,13 @@ namespace FunctionalParser
 
         public override string ToString()
         {
-			string s = IsPresent() ? Get().ToString() : "None";
-			return $"Option[{s}]";
+			if (IsSome())
+			{ 
+                return $"Option[{_value[0]}]";
+            } else
+			{
+                return $"Option[None]";
+            }
         }
     }
 }
