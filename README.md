@@ -8,20 +8,19 @@ DIGIT           = [0-9] ;
 NZ_DIGIT        = [1-9] ;
 NAME            = (LETTER | "_") (LETTER | DIGIT | "_")* ;
 INTEGER         = "0" | NZDIGIT (DIGIT)* ;
-STRING          = "\"" [A-Za-z0-9]* "\"" ;
 
 args_lst        = ""
                 | NAME
                 | NAME "," args_lst ;
 
-function_def    = NAME "(" args_lst ")"
+function_dec    = NAME "(" args_lst ")"
 
 program         = function+ ;
-function        = "function" NAME "(" args_lst ")" "{" stmt+ "}" ;
+function        = "function" function_dec "{" stmt+ "}" ;
 stmt            = assign | if | while | call | return | skip ;
 
 
-assign          = "let" NAME "=" (expr | STRING) ";" ;
+assign          = "let" NAME "=" expr ";" ;
 if              = "if" "(" cond_expr ")" "{" stmt+ "}" "else" "{" stmt+ "}" ;
 while           = "while' "(" cond_expr ")" "{" stmt+ "}" ;
 call            = "call" NAME ";" ;
@@ -53,7 +52,7 @@ term            = term "*" factor
                 | factor ;
 
 factor          = "(" expr ")"
-                | function_def
+                | function_dec
                 | NAME
                 | INTEGER ;
 ```
