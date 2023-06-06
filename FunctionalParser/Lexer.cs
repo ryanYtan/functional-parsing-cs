@@ -1,44 +1,15 @@
-﻿
-// x*   => Choice(Some(x), Nothing)
+﻿// x*   => Choice(Some(x), Nothing)
 // x+   => Some(x)
 // x|y  => Choice(x, y)
 // x,y  => Sequence(x, y)
 
 namespace FunctionalParser
 {
+    using static Lexer;
+    using LexerResult = Result<IEnumerable<string>, string>;
+
     public delegate LexerResult ILexer(string stream);
 
-    public class LexerResult
-    {
-        public IEnumerable<string> Result { get; set; }
-        public string Remaining { get; set; }
-        public bool IsSuccess { get; set; }
-    
-        public LexerResult(IEnumerable<string> result, string remaining, bool isSuccess)
-        {
-            Result = result;
-            Remaining = remaining;
-            IsSuccess = isSuccess;
-        }
-    
-        public static LexerResult Success(IEnumerable<string> result, string remaining)
-        {
-            return new LexerResult(result, remaining, true);
-        }
-    
-        public static LexerResult Fail(string remaining)
-        {
-            return new LexerResult(Array.Empty<string>(), remaining, false);
-        }
-    
-        public void Deconstruct(out IEnumerable<string> result, out string remaining, out bool isSuccess)
-        {
-            result = Result;
-            remaining = Remaining;
-            isSuccess = IsSuccess;
-        }
-    }
-    
     public static class Lexer
     {
         public static readonly ILexer LETTER_LOWERCASE = Range('a', 'z');
@@ -60,14 +31,14 @@ namespace FunctionalParser
             }
             return (s) => lexers
                 .Select(lx => lx.Invoke(s))
-                .FirstOrDefault(result => result.IsSuccess, LexerResult.Fail(s));
+                .FirstOrDefault(lex => lex.IsSuccess, LexerResult.Fail(s));
         }
     
         public static ILexer Some(ILexer lexer)
         {
             return (s) =>
             {
-                var (result, remaining, isSuccess) = lexer.Invoke(s);
+                var (value, remaining, isSuccess) = lexer.Invoke(s);
                 if (!isSuccess)
                 {
                     return LexerResult.Fail(s);
@@ -75,8 +46,8 @@ namespace FunctionalParser
                 var builder = new List<IEnumerable<string>>();
                 while (isSuccess)
                 {
-                    builder.Add(result);
-                    (result, remaining, isSuccess) = lexer.Invoke(remaining);
+                    builder.Add(value.Get());
+                    (value, remaining, isSuccess) = lexer.Invoke(remaining);
                 }
                 return LexerResult.Success(
                     builder.Select(x => x.Aggregate((x, y) => x + y)).AsEnumerable(),
@@ -93,16 +64,16 @@ namespace FunctionalParser
             }
             return (s) =>
             {
-                var (result, remaining, isSuccess) = LexerResult.Fail(s); //placeholder
+                var (value, remaining, isSuccess) = LexerResult.Fail(s); //placeholder
                 var builder = new List<IEnumerable<string>>();
                 foreach (ILexer lx in lexers)
                 {
-                    (result, remaining, isSuccess) = lx.Invoke(remaining);
-                    builder.Add(result);
+                    (value, remaining, isSuccess) = lx.Invoke(remaining);
                     if (!isSuccess)
                     {
                         return LexerResult.Fail(s);
                     }
+                    builder.Add(value.Get());
                 }
                 return LexerResult.Success(
                     builder.Select(x => x.Aggregate("", (x, y) => x + y)).ToList(),
@@ -142,9 +113,9 @@ namespace FunctionalParser
         {
             return (s) =>
             {
-                var result = lexer.Invoke(s);
-                return result.Remaining.Length == 0
-                    ? LexerResult.Success(result.Result, "")
+                var (value, remaining, isSuccess) = lexer.Invoke(s);
+                return remaining.Length == 0
+                    ? LexerResult.Success(value.Get(), "")
                     : LexerResult.Fail(s);
             };
         }
@@ -153,7 +124,7 @@ namespace FunctionalParser
         {
             return (s) =>
             {
-                var (result, remaining, isSuccess) = lexer.Invoke(s);
+                var (value, remaining, isSuccess) = lexer.Invoke(s);
                 return isSuccess ? LexerResult.Success(Array.Empty<string>(), s) : LexerResult.Fail(s);
             };
         }
@@ -162,9 +133,40 @@ namespace FunctionalParser
         {
             return (s) =>
             {
-                var (result, remaining, isSuccess) = lexer.Invoke(s);
+                var (value, remaining, isSuccess) = lexer.Invoke(s);
                 return isSuccess ? LexerResult.Fail(s) : LexerResult.Success(Array.Empty<string>(), s);
             };
+        }
+    }
+
+    public static class ProgramLexer
+    {
+        public static ILexer Program()
+        {
+            // Lexer definitions
+            var skipSpaces = Some(Choice(Char(' '), Char('\n'), Char('\b'), Char('\t'), Char('\r')));
+            var name = Sequence(
+                LETTER,
+                ZeroOrMore(Choice(LETTER, DIGIT))
+            );
+            var number = Choice(
+                Sequence(Char('0'), AssertNotAfter(Choice(LETTER, DIGIT))),
+                Sequence(NZ_DIGIT, ZeroOrMore(DIGIT))
+            );
+            var doubleCharacterOperators = Choice(
+                new string[] { "!=", "==", "<=", ">=", "&&", "||" }.Select(x => CharSequence(x)).ToArray()
+            );
+            var singleCharacterOperators = Choice(
+                "&|^~!=<>(){};+-*/%\"".Select(x => Char(x)).ToArray()
+            );
+            var program = FullMatch(ZeroOrMore(Choice(
+                name,
+                number,
+                doubleCharacterOperators,
+                singleCharacterOperators,
+                skipSpaces
+            )));
+            return program;
         }
     }
 }
