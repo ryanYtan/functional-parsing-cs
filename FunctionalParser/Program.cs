@@ -15,8 +15,8 @@ var programSource = sb.ToString();
 ProgramLexer.Program()
     .Invoke(programSource)
     .Value
-    .SelectMany(x => x.ToList())
+    .SelectMany(x => x)
     .Where(x => !string.IsNullOrWhiteSpace(x))
-    .Select(x => Token.From(x))
+    .Select(Token.From)
     .ToList()
-    .ForEach(x => Console.WriteLine(x));
+    .ForEach(Console.WriteLine);
