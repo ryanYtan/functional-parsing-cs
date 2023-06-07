@@ -20,6 +20,11 @@ namespace FunctionalParser
 			return new Result<T, R>(Option<T>.Some(value), remaining, true);
         }
 
+		public static Result<T, R> Empty(R remaining)
+		{
+			return new Result<T, R>(Option<T>.None(), remaining, true);
+        }
+
 		public static Result<T, R> Fail(R remaining)
 		{
 			return new Result<T, R>(Option<T>.None(), remaining, false);
