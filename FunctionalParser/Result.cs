@@ -8,7 +8,7 @@ namespace FunctionalParser
 		public R Remaining { get; set; }
 		public bool IsSuccess { get; set; }
 
-		private Result(Option<T> value, R remaining, bool isSuccess)
+		protected Result(Option<T> value, R remaining, bool isSuccess)
 		{
 			Value = value;
 			Remaining = remaining;

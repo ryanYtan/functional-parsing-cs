@@ -2,17 +2,38 @@
 
 namespace FunctionalParser
 {
-    using ParserResult = Result<SyntaxTree, IList<Token>>;
-	public delegate ParserResult IParser(IList<Token> tokens);
+    public class ParserResult<T> : Result<T, IList<Token>>
+    {
+        protected ParserResult(Option<T> value, IList<Token> remaining, bool isSuccess)
+            : base(value, remaining, isSuccess)
+        { }
+
+        public static new ParserResult<T> Success(T value, IList<Token> remaining)
+        {
+            return new ParserResult<T>(Option<T>.Some(value), remaining, true);
+        }
+
+        public static new ParserResult<T> Empty(IList<Token> remaining)
+        {
+            return new ParserResult<T>(Option<T>.None(), remaining, true);
+        }
+
+        public static new ParserResult<T> Fail(IList<Token> remaining)
+        {
+            return new ParserResult<T>(Option<T>.None(), remaining, false);
+        }
+    }
+
+	public delegate ParserResult<T> IParser<T>(IList<Token> tokens);
 
 	public static class Parser
 	{
-        public static IParser Nothing()
+        public static IParser<SyntaxTree> Nothing()
         {
-            return (tokens) => ParserResult.Empty(tokens);
+            return (tokens) => ParserResult<SyntaxTree>.Empty(tokens);
         }
 
-        public static IParser Choice(params IParser[] parsers)
+        public static IParser<T> Choice<T>(params IParser<T>[] parsers)
         {
             if (parsers.Length == 0)
             {
@@ -20,10 +41,10 @@ namespace FunctionalParser
             }
             return (tokens) => parsers
                 .Select(p => p.Invoke(tokens))
-                .FirstOrDefault(p => p.IsSuccess, ParserResult.Fail(tokens));
+                .FirstOrDefault(p => p.IsSuccess, ParserResult<T>.Fail(tokens));
         }
 
-        public static IParser Sequence(params IParser[] parsers)
+        public static IParser<T> Sequence<T>(params IParser<T>[] parsers)
         {
             if (parsers.Length == 0)
             {
@@ -31,40 +52,42 @@ namespace FunctionalParser
             }
             return (tokens) =>
             {
-
+                foreach (var parser in parsers)
+                { 
+                }
             };
         }
 
-        public static IParser ExpectString(string t)
+        public static IParser<SyntaxTree> ExpectString<SyntaxTree>(string t)
         {
             return (tokens) =>
             {
                 if (tokens.Count == 0 || tokens[0].CharSeq != t)
                 {
-                    return ParserResult.Fail(tokens);
+                    return ParserResult<SyntaxTree>.Fail(tokens);
                 }
-                return ParserResult.Empty(tokens.Skip(1).ToList());
+                return ParserResult<SyntaxTree>.Empty(tokens.Skip(1).ToList());
             };
         }
 
-        public static IParser ExpectType(TokenType type)
+        public static IParser<SyntaxTree> ExpectType<SyntaxTree>(TokenType type)
         {
             return (tokens) =>
             {
                 if (tokens.Count == 0)
                 {
-                    return ParserResult.Fail(tokens);
+                    return ParserResult<SyntaxTree>.Fail(tokens);
                 }
                 return tokens[0].Type == type
-                    ? ParserResult.Empty(tokens.Skip(1).ToList())
-                    : ParserResult.Fail(tokens);
+                    ? ParserResult<SyntaxTree>.Empty(tokens.Skip(1).ToList())
+                    : ParserResult<SyntaxTree>.Fail(tokens);
             };
         }
 	}
 
     public static class ProgramParser
     {
-        public static IParser Program()
+        public static IParser<SyntaxTree> Program()
         {
             return Nothing();
         }
